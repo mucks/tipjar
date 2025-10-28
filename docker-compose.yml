@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  tipjar:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    # Or use the pre-built image from GitHub Container Registry:
+    # image: ghcr.io/YOUR_GITHUB_USERNAME/rust-smart-contracts/tipjar-client:latest
+    container_name: tipjar-web
+    restart: unless-stopped
+    environment:
+      - NEXT_PUBLIC_SOLANA_NETWORK=${NEXT_PUBLIC_SOLANA_NETWORK:-https://api.devnet.solana.com}
+    networks:
+      - web
+    labels:
+      # Enable Traefik
+      - "traefik.enable=true"
+
+      # Router configuration
+      - "traefik.http.routers.tipjar.rule=Host(`${TIPJAR_DOMAIN:-tipjar.mucks.me}`)"
+      - "traefik.http.routers.tipjar.entrypoints=websecure"
+      - "traefik.http.routers.tipjar.tls.certresolver=letsencrypt"
+
+      # Service configuration
+      - "traefik.http.services.tipjar.loadbalancer.server.port=3000"
+
+      # Middleware - add security headers
+      - "traefik.http.routers.tipjar.middlewares=tipjar-headers"
+      - "traefik.http.middlewares.tipjar-headers.headers.customresponseheaders.X-Frame-Options=SAMEORIGIN"
+      - "traefik.http.middlewares.tipjar-headers.headers.customresponseheaders.X-Content-Type-Options=nosniff"
+
+networks:
+  web:
+    external: true
