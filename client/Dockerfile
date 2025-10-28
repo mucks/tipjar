@@ -2,8 +2,11 @@
 # Multi-stage build for optimized image size
 
 # Stage 1: Dependencies
-FROM node:18-alpine AS deps
+FROM node:20-alpine AS deps
 WORKDIR /app
+
+# Install build dependencies for native modules
+RUN apk add --no-cache python3 make g++ linux-headers eudev-dev libusb-dev
 
 # Copy package files
 COPY package.json package-lock.json* ./
@@ -12,8 +15,11 @@ COPY package.json package-lock.json* ./
 RUN npm ci --legacy-peer-deps --only=production || npm install --production --legacy-peer-deps
 
 # Stage 2: Builder
-FROM node:18-alpine AS builder
+FROM node:20-alpine AS builder
 WORKDIR /app
+
+# Install build dependencies for native modules
+RUN apk add --no-cache python3 make g++ linux-headers eudev-dev libusb-dev
 
 # Copy package files and install ALL dependencies (including devDependencies for build)
 COPY package.json package-lock.json* ./
@@ -30,7 +36,7 @@ ENV NODE_ENV production
 RUN npm run build
 
 # Stage 3: Runner
-FROM node:18-alpine AS runner
+FROM node:20-alpine AS runner
 WORKDIR /app
 
 ENV NODE_ENV production
