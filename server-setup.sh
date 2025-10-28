@@ -22,7 +22,7 @@ print_warning() { echo -e "${YELLOW}⚠️  $1${NC}"; }
 print_error() { echo -e "\033[0;31m❌ $1${NC}"; }
 
 # Configuration
-DEPLOY_DIR="/opt/tipjar"
+DEPLOY_DIR="/home/mucks/tipjar"
 GITHUB_USERNAME="${1:-YOUR_GITHUB_USERNAME}"
 DOMAIN="tipjar.mucks.me"
 
@@ -64,8 +64,7 @@ echo ""
 
 # Step 3: Create deployment directory
 print_info "Step 3: Creating deployment directory..."
-sudo mkdir -p $DEPLOY_DIR
-sudo chown $USER:$USER $DEPLOY_DIR
+mkdir -p $DEPLOY_DIR
 print_success "Deployment directory created: $DEPLOY_DIR"
 echo ""
 

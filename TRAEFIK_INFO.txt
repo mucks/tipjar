@@ -1,0 +1,106 @@
+╔═══════════════════════════════════════════════════════════════╗
+║           TIPJAR TRAEFIK CONFIGURATION                        ║
+╚═══════════════════════════════════════════════════════════════╝
+
+✅ YES - The client IS NOW automatically exposed to Traefik!
+
+═══════════════════════════════════════════════════════════════
+
+WHAT'S CONFIGURED:
+-----------------
+
+1. Docker Network: "web" (must exist and be connected to Traefik)
+2. Domain: tipjar.mucks.me (configurable via TIPJAR_DOMAIN)
+3. HTTPS: Automatic SSL via Let's Encrypt
+4. Port: 3000 (internal, not exposed to host)
+5. Security Headers: X-Frame-Options, X-Content-Type-Options
+
+═══════════════════════════════════════════════════════════════
+
+TRAEFIK LABELS APPLIED:
+----------------------
+
+✓ traefik.enable=true
+✓ traefik.http.routers.tipjar.rule=Host(`tipjar.mucks.me`)
+✓ traefik.http.routers.tipjar.entrypoints=websecure
+✓ traefik.http.routers.tipjar.tls.certresolver=letsencrypt
+✓ traefik.http.services.tipjar.loadbalancer.server.port=3000
+✓ Security middleware for headers
+
+═══════════════════════════════════════════════════════════════
+
+PREREQUISITES:
+-------------
+
+1. Traefik must be running on the server
+2. The "web" network must exist:
+   
+   docker network create web
+
+3. DNS must point to your server:
+   
+   tipjar.mucks.me → YOUR_SERVER_IP
+
+4. Traefik must be configured with Let's Encrypt
+
+═══════════════════════════════════════════════════════════════
+
+HOW TO VERIFY:
+-------------
+
+1. Check if Traefik network exists:
+   docker network ls | grep web
+
+2. Check if Traefik is running:
+   docker ps | grep traefik
+
+3. Check container is in the network:
+   docker inspect tipjar-web | grep -A 5 Networks
+
+4. Test the domain:
+   curl -I https://tipjar.mucks.me
+
+═══════════════════════════════════════════════════════════════
+
+CHANGING THE DOMAIN:
+-------------------
+
+Set the TIPJAR_DOMAIN environment variable before deployment:
+
+   export TIPJAR_DOMAIN=your-domain.com
+   bash deploy.sh
+
+Or in your GitHub Actions:
+
+   TIPJAR_DOMAIN=your-domain.com bash deploy.sh
+
+═══════════════════════════════════════════════════════════════
+
+TROUBLESHOOTING:
+---------------
+
+Issue: "network web not found"
+Fix:   docker network create web
+
+Issue: 502 Bad Gateway
+Fix:   Check container logs: docker compose logs -f
+
+Issue: SSL certificate error
+Fix:   Wait a few minutes for Let's Encrypt, check Traefik logs
+
+Issue: Domain not resolving
+Fix:   Check DNS settings and wait for propagation
+
+═══════════════════════════════════════════════════════════════
+
+ACCESS YOUR APPLICATION:
+-----------------------
+
+✅ Via Traefik (recommended):
+   https://tipjar.mucks.me
+
+❌ Direct access (port not exposed):
+   http://server-ip:3000 (NOT available)
+
+═══════════════════════════════════════════════════════════════
+
