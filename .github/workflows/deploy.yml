@@ -75,29 +75,82 @@ jobs:
           key: ${{ secrets.SERVER_SSH_KEY }}
           port: ${{ secrets.SERVER_PORT || 22 }}
           script: |
-            # Navigate to deployment directory
-            cd ${{ secrets.DEPLOY_PATH || '/opt/tipjar' }}
+            # Set variables
+            DEPLOY_DIR="${{ secrets.DEPLOY_PATH || '/home/mucks/tipjar' }}"
+            IMAGE_NAME="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest"
+            TIPJAR_DOMAIN="${{ secrets.TIPJAR_DOMAIN || 'tipjar.mucks.me' }}"
+            SOLANA_NETWORK="${{ secrets.SOLANA_NETWORK || 'https://api.devnet.solana.com' }}"
+            
+            echo "🚀 Starting deployment to $DEPLOY_DIR..."
+            
+            # Create deployment directory (FIX: This was missing!)
+            mkdir -p "$DEPLOY_DIR"
+            cd "$DEPLOY_DIR"
             
             # Login to GitHub Container Registry
             echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
             
-            # Pull the latest image
-            docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+            # Create docker-compose.yml with Traefik support
+            cat > docker-compose.yml << 'EOF'
+            version: '3.8'
+            services:
+              tipjar-client:
+                image: ${IMAGE_NAME}
+                container_name: tipjar-web
+                expose:
+                  - "3000"
+                environment:
+                  - NEXT_PUBLIC_SOLANA_NETWORK=${SOLANA_NETWORK}
+                networks:
+                  - web
+                labels:
+                  - "traefik.enable=true"
+                  - "traefik.http.routers.tipjar.rule=Host(\`${TIPJAR_DOMAIN}\`)"
+                  - "traefik.http.routers.tipjar.entrypoints=websecure"
+                  - "traefik.http.routers.tipjar.tls.certresolver=letsencrypt"
+                  - "traefik.http.services.tipjar.loadbalancer.server.port=3000"
+                  - "traefik.http.routers.tipjar.middlewares=tipjar-headers"
+                  - "traefik.http.middlewares.tipjar-headers.headers.customresponseheaders.X-Frame-Options=SAMEORIGIN"
+                  - "traefik.http.middlewares.tipjar-headers.headers.customresponseheaders.X-Content-Type-Options=nosniff"
+                restart: unless-stopped
+            networks:
+              web:
+                external: true
+            EOF
             
-            # Stop and remove old container
-            docker-compose down || true
+            # Create .env file
+            cat > .env << ENVEOF
+            IMAGE_NAME=${IMAGE_NAME}
+            SOLANA_NETWORK=${SOLANA_NETWORK}
+            TIPJAR_DOMAIN=${TIPJAR_DOMAIN}
+            ENVEOF
+            
+            # Pull the latest image
+            echo "📦 Pulling latest image..."
+            docker pull "$IMAGE_NAME"
+            
+            # Stop and remove old container (FIX: use "docker compose" not "docker-compose")
+            echo "🛑 Stopping old container..."
+            docker compose down || true
             
             # Start new container
-            NEXT_PUBLIC_SOLANA_NETWORK=${{ secrets.SOLANA_NETWORK || 'https://api.devnet.solana.com' }} \
-            docker-compose up -d
+            echo "🚀 Starting new container..."
+            docker compose up -d
             
             # Clean up old images
+            echo "🧹 Cleaning up old images..."
             docker image prune -af
             
             # Show status
-            docker-compose ps
+            echo "📊 Container status:"
+            docker compose ps
             
+            echo ""
+            echo "========================================"
             echo "🎉 Deployment complete!"
+            echo "========================================"
+            echo "Application: https://${TIPJAR_DOMAIN}"
+            echo "========================================"
 
       - name: Health check
         run: |

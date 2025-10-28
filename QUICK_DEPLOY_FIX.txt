@@ -1,0 +1,88 @@
+═══════════════════════════════════════════════════════════════
+   QUICK FIX FOR: "cd: ***: No such file or directory"
+═══════════════════════════════════════════════════════════════
+
+THE PROBLEM:
+-----------
+Your GitHub Actions script tries to cd into a directory that 
+doesn't exist.
+
+THE FIX:
+-------
+Add "mkdir -p /home/mucks/tipjar" BEFORE the "cd" command.
+
+═══════════════════════════════════════════════════════════════
+
+OPTION 1: ONE-LINE FIX
+----------------------
+
+Replace this line in your GitHub Actions:
+
+  cd /home/mucks/tipjar
+
+With this:
+
+  mkdir -p /home/mucks/tipjar && cd /home/mucks/tipjar
+
+═══════════════════════════════════════════════════════════════
+
+OPTION 2: COMPLETE REPLACEMENT SCRIPT
+-------------------------------------
+
+Replace your ENTIRE deployment script section with:
+
+#!/bin/bash
+set -e
+
+DEPLOY_DIR="/home/mucks/tipjar"
+IMAGE_NAME="ghcr.io/YOUR_USERNAME/tipjar/tipjar-client:latest"
+
+# FIX: Create directory first!
+mkdir -p "$DEPLOY_DIR"
+cd "$DEPLOY_DIR"
+
+# Login
+echo "${GITHUB_TOKEN}" | docker login ghcr.io -u "${GITHUB_ACTOR}" --password-stdin
+
+# Create docker-compose.yml
+cat > docker-compose.yml << 'EOF'
+version: '3.8'
+services:
+  tipjar-client:
+    image: ghcr.io/YOUR_USERNAME/tipjar/tipjar-client:latest
+    container_name: tipjar-web
+    expose:
+      - "3000"
+    environment:
+      - NEXT_PUBLIC_SOLANA_NETWORK=${NEXT_PUBLIC_SOLANA_NETWORK:-https://api.devnet.solana.com}
+    networks:
+      - web
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.tipjar.rule=Host(\`tipjar.mucks.me\`)"
+      - "traefik.http.routers.tipjar.entrypoints=websecure"
+      - "traefik.http.routers.tipjar.tls.certresolver=letsencrypt"
+      - "traefik.http.services.tipjar.loadbalancer.server.port=3000"
+    restart: unless-stopped
+networks:
+  web:
+    external: true
+EOF
+
+# Deploy
+docker pull "$IMAGE_NAME"
+docker compose down || true
+docker compose up -d
+docker image prune -af
+
+echo "🎉 Deployment complete!"
+
+═══════════════════════════════════════════════════════════════
+
+REMEMBER:
+1. Replace YOUR_USERNAME with your actual GitHub username
+2. Use "docker compose" (space) not "docker-compose" (hyphen)
+3. The directory will be created automatically now!
+
+═══════════════════════════════════════════════════════════════
+
