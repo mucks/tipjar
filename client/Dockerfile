@@ -6,17 +6,20 @@ FROM node:18-alpine AS deps
 WORKDIR /app
 
 # Copy package files
-COPY package.json package-lock.json ./
+COPY package.json package-lock.json* ./
 
 # Install dependencies
-RUN npm ci --only=production
+RUN npm ci --legacy-peer-deps --only=production || npm install --production --legacy-peer-deps
 
 # Stage 2: Builder
 FROM node:18-alpine AS builder
 WORKDIR /app
 
-# Copy dependencies from deps stage
-COPY --from=deps /app/node_modules ./node_modules
+# Copy package files and install ALL dependencies (including devDependencies for build)
+COPY package.json package-lock.json* ./
+RUN npm install --legacy-peer-deps
+
+# Copy source files
 COPY . .
 
 # Set environment variables for build
