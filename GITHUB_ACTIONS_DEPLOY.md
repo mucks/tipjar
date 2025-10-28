@@ -101,7 +101,7 @@ Use this directly in your GitHub Actions workflow:
             - web
           labels:
             - "traefik.enable=true"
-            - "traefik.http.routers.tipjar.rule=Host(\`${TIPJAR_DOMAIN}\`)"
+            - "traefik.http.routers.tipjar.rule=Host(`${TIPJAR_DOMAIN}`)"
             - "traefik.http.routers.tipjar.entrypoints=websecure"
             - "traefik.http.routers.tipjar.tls.certresolver=letsencrypt"
             - "traefik.http.services.tipjar.loadbalancer.server.port=3000"

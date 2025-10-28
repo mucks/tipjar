@@ -59,7 +59,7 @@ services:
       - web
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.tipjar.rule=Host(\`tipjar.mucks.me\`)"
+      - "traefik.http.routers.tipjar.rule=Host(`tipjar.mucks.me`)"
       - "traefik.http.routers.tipjar.entrypoints=websecure"
       - "traefik.http.routers.tipjar.tls.certresolver=letsencrypt"
       - "traefik.http.services.tipjar.loadbalancer.server.port=3000"
